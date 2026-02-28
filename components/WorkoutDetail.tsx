@@ -37,7 +37,7 @@ export default function WorkoutDetail({ workout, onBack, onStart }: { workout: W
            <div className="absolute inset-0 overflow-hidden rounded-none md:rounded-t-[2.5rem]">
              <div 
                className="absolute inset-0 bg-cover bg-center" 
-               style={{ backgroundImage: `url(${workout.imageUrl})` }}
+               style={{ backgroundImage: `url(${workout.imageUrl.startsWith('http') ? `/api/image?url=${encodeURIComponent(workout.imageUrl)}` : workout.imageUrl})` }}
              />
              {/* Superior gradient for desktop and mobile */}
              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-black/20" />

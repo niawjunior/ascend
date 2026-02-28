@@ -21,7 +21,7 @@ export default function WorkoutCard({ workout, onClick }: { workout: WorkoutDefi
       {/* Background Image with animated scale */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-50 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700 ease-out"
-        style={{ backgroundImage: `url(${workout.imageUrl})` }}
+        style={{ backgroundImage: `url(${workout.imageUrl.startsWith('http') ? `/api/image?url=${encodeURIComponent(workout.imageUrl)}` : workout.imageUrl})` }}
       />
       {/* Better Gradient - Darker at bottom for text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/60 to-transparent" />

@@ -2,11 +2,13 @@
 
 import { useWorkoutTimer } from "@/hooks/useWorkoutTimer";
 import { WorkoutDefinition } from "@/lib/workoutData";
-import { X, Pause, Play, SkipForward, SkipBack } from "lucide-react";
+import { Play, Pause, X, Volume2, VolumeX } from "lucide-react";
 import { motion } from "framer-motion";
+import WorkoutCompleteSummary from "./WorkoutCompleteSummary";
 
 export default function ActiveTimer({ workout, onExit }: { workout: WorkoutDefinition, onExit: () => void }) {
   const { state, controls } = useWorkoutTimer(workout);
+  const isComplete = state.isFinished;
   
   // Clean minutes:seconds format
   const formatTime = (seconds: number) => {
@@ -18,19 +20,55 @@ export default function ActiveTimer({ workout, onExit }: { workout: WorkoutDefin
     return s.toString();
   };
 
+  // We need to track how long we actually trained. We can derive this if needed, or use the Workout total time
+  // For simplicity, we calculate total planned work if they hit complete.
+  const totalReps = workout.sets * workout.repsPerSet;
+  const totalWorkSecs = totalReps * workout.workTime;
+  const totalRestSecs = (workout.sets * (workout.repsPerSet - 1) * workout.restTime) + ((workout.sets - 1) * workout.longRestTime);
+  const totalDurationSeconds = workout.prepTime + totalWorkSecs + totalRestSecs;
+
+  const handleSaveHistory = async (logData: any) => {
+    try {
+      const uid = localStorage.getItem("ascend_user_id");
+      if (!uid) return onExit();
+
+      // Fetch existing history to append
+      const getRes = await fetch(`/api/history?userId=${uid}`);
+      let existingHistory = [];
+      if (getRes.ok) {
+        const data = await getRes.json();
+        existingHistory = data.history || [];
+      }
+
+      // Append new log
+      const newLog = {
+        id: `log_${Date.now()}`,
+        date: new Date().toISOString(),
+        ...logData
+      };
+
+      await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid, logs: [newLog, ...existingHistory] })
+      });
+
+      onExit();
+    } catch (e) {
+      console.error("Failed to save history", e);
+      onExit();
+    }
+  };
+
   // Workout Completion Screen
-  if (state.isFinished) {
+  if (isComplete) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] bg-emerald-600 text-white p-6 animate-in fade-in zoom-in duration-500 text-center">
-        <h1 className="text-6xl font-black italic tracking-widest uppercase mb-6">Workout<br/>Complete!</h1>
-        <p className="text-emerald-100 text-xl font-medium mb-12">Amazing job crushing {workout.title}.</p>
-        <button 
-          onClick={onExit}
-          className="px-10 py-5 rounded-2xl bg-white text-emerald-700 text-xl font-bold tracking-wider uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)]"
-        >
-          Finish & Exit
-        </button>
-      </div>
+      <WorkoutCompleteSummary 
+        workout={workout}
+        durationSeconds={totalDurationSeconds}
+        onSave={handleSaveHistory}
+        onDiscard={onExit}
+      />
     );
   }
 
@@ -113,7 +151,7 @@ export default function ActiveTimer({ workout, onExit }: { workout: WorkoutDefin
           onClick={controls.skipBackward}
           className="p-5 md:p-6 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white active:scale-95 transition-all focus:outline-none backdrop-blur-md"
         >
-          <SkipBack className="w-8 h-8 md:w-10 md:h-10 fill-current" />
+          <svg className="w-8 h-8 md:w-10 md:h-10 fill-current" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
         </button>
         
         <button 
@@ -128,7 +166,7 @@ export default function ActiveTimer({ workout, onExit }: { workout: WorkoutDefin
           onClick={controls.skipForward}
           className="p-5 md:p-6 rounded-full bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white active:scale-95 transition-all focus:outline-none backdrop-blur-md"
         >
-          <SkipForward className="w-8 h-8 md:w-10 md:h-10 fill-current" />
+          <svg className="w-8 h-8 md:w-10 md:h-10 fill-current" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
         </button>
       </div>
 

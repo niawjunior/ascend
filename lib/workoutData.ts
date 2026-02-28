@@ -22,6 +22,16 @@ export interface WorkoutDefinition {
   imageUrl: string;   // Path to the high-res thumbnail/hero image
 }
 
+export interface WorkoutLog {
+  id: string; // Unique ID for this specific session
+  workoutId: string; // Reference to the WorkoutDefinition
+  title: string;
+  date: string; // ISO String
+  durationSeconds: number; // Actual time spent
+  rpe?: number; // Rate of Perceived Exertion (1-10)
+  notes?: string; 
+}
+
 // Hardcoded Library of Professional Climbing Workouts
 export const WORKOUT_LIBRARY: WorkoutDefinition[] = [
   {

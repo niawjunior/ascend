@@ -49,7 +49,7 @@ jobs:
           PR_TITLE: ${{ steps.pr-details.outputs.title }}
         run: |
           PR_BODY=$(jq -r .body pr_data.json)
-          opencode run -m anthropic/claude-3-5-sonnet-20241022 "A new pull request has been created: '${PR_TITLE}'
+          opencode run -m anthropic/claude-sonnet-4-20250514 "A new pull request has been created: '${PR_TITLE}'
 
           <pr-number>
           ${{ steps.pr-number.outputs.number }}

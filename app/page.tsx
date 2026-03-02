@@ -8,6 +8,7 @@ import ActiveTimer from "@/components/ActiveTimer";
 import CreateWorkoutModal from "@/components/CreateWorkoutModal";
 import LoginScreen from "@/components/LoginScreen";
 import StatsDashboard from "@/components/StatsDashboard";
+import BadCounter from "@/components/BadCounter";
 import { Plus, User, LogOut, BarChart2, Dumbbell } from "lucide-react";
 
 export default function Home() {
@@ -189,7 +190,10 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <StatsDashboard />
+              <div className="flex flex-col gap-8">
+                <BadCounter />
+                <StatsDashboard />
+              </div>
             )}
           </div>
         ) : (

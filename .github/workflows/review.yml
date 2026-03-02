@@ -77,4 +77,4 @@ jobs:
             -f 'body=[summary of issue]' -f 'commit_id=${{ steps.pr-details.outputs.sha }}' -f 'path=[path-to-file]' -F \"line=[line]\" -f 'side=RIGHT'
           \`\`\`
 
-          Only create comments for actual violations. If the code follows all guidelines, comment on the issue using gh cli: 'lgtm' AND NOTHING ELSE!!!!."
+          Only create comments for actual violations. If the code follows all guidelines, DO NOT use the \`gh api\` command above. Instead, comment on the pull request using this exact CLI command: 'gh issue comment ${{ steps.pr-number.outputs.number }} --body \"lgtm\"' AND NOTHING ELSE!!!!."

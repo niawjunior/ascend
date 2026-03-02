@@ -81,15 +81,17 @@ jobs:
               return false;
             }
 
+            const issues = [];
+            
             // Step 1: Check title format
             // Matches: feat:, feat(scope):, feat (scope):, etc.
             const titlePattern = /^(feat|fix|docs|chore|refactor|test)\s*(\([a-zA-Z0-9-]+\))?\s*:/;
             const hasValidTitle = titlePattern.test(title);
 
             if (!hasValidTitle) {
-              await addLabel('needs:title');
-              await addLabel('needs:compliance');
-              await comment('title', `Hey! Your PR title \`${title}\` doesn't follow conventional commit format.
+              issues.push({
+                type: 'title',
+                message: `Hey! Your PR title \`${title}\` doesn't follow conventional commit format.
 
             Please update it to start with one of:
             - \`feat:\` new feature
@@ -99,19 +101,20 @@ jobs:
             - \`refactor:\` code refactoring
             - \`test:\` adding or updating tests
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
-              return;
-            }
-
-            await removeLabel('needs:title');
-            const removedTitleComment = await removeComment('title');
-            if (removedTitleComment) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-                body: 'Thanks for updating your PR title! It now meets our contributing guidelines. 👍'
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`
               });
+              await addLabel('needs:title');
+            } else {
+              await removeLabel('needs:title');
+              const removedTitleComment = await removeComment('title');
+              if (removedTitleComment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: 'Thanks for updating your PR title! It now meets our contributing guidelines. 👍'
+                });
+              }
             }
 
             // Step 2: Check for linked issue (skip for docs/refactor/chore)
@@ -119,32 +122,31 @@ jobs:
             if (skipIssueCheck) {
               await removeLabel('needs:issue');
               console.log('Skipping issue check for docs/refactor/chore PR');
-              return;
-            }
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 1) {
-                      totalCount
+            } else {
+              const query = `
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      closingIssuesReferences(first: 1) {
+                        totalCount
+                      }
                     }
                   }
                 }
-              }
-            `;
+              `;
 
-            const result = await github.graphql(query, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: pr.number
-            });
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: pr.number
+              });
 
-            const linkedIssues = result.repository.pullRequest.closingIssuesReferences.totalCount;
+              const linkedIssues = result.repository.pullRequest.closingIssuesReferences.totalCount;
 
-            if (linkedIssues === 0) {
-              await addLabel('needs:issue');
-              await addLabel('needs:compliance');
-              await comment('issue', `Thanks for your contribution!
+              if (linkedIssues === 0) {
+                issues.push({
+                  type: 'issue',
+                  message: `Thanks for your contribution!
 
             This PR doesn't have a linked issue. All PRs must reference an existing issue.
 
@@ -152,10 +154,37 @@ jobs:
             1. Open an issue describing the bug/feature (if one doesn't exist)
             2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`);
-              return;
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`
+                });
+                await addLabel('needs:issue');
+              } else {
+                await removeLabel('needs:issue');
+                const removedIssueComment = await removeComment('issue');
+                if (removedIssueComment) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: 'Thanks for linking an issue! Your PR now meets our contributing guidelines. 👍'
+                  });
+                }
+              }
             }
 
-            await removeLabel('needs:issue');
-            await removeLabel('needs:compliance');
-            console.log('PR meets all standards');
+            // Global Compliance Check
+            const hasComplianceLabel = pr.labels?.some(l => l.name === 'needs:compliance');
+
+            if (issues.length > 0) {
+              if (!hasComplianceLabel) {
+                await addLabel('needs:compliance');
+              }
+              for (const issue of issues) {
+                await comment(issue.type, issue.message);
+              }
+              console.log(`PR #${pr.number} is non-compliant: ${issues.map(i => i.type).join(', ')}`);
+            } else {
+              if (hasComplianceLabel) {
+                await removeLabel('needs:compliance');
+              }
+              console.log('PR meets all standards');
+            }

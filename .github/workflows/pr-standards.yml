@@ -106,15 +106,7 @@ jobs:
               await addLabel('needs:title');
             } else {
               await removeLabel('needs:title');
-              const removedTitleComment = await removeComment('title');
-              if (removedTitleComment) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: pr.number,
-                  body: 'Thanks for updating your PR title! It now meets our contributing guidelines. 👍'
-                });
-              }
+              await removeComment('title');
             }
 
             // Step 2: Check for linked issue (skip for docs/refactor/chore)
@@ -159,15 +151,7 @@ jobs:
                 await addLabel('needs:issue');
               } else {
                 await removeLabel('needs:issue');
-                const removedIssueComment = await removeComment('issue');
-                if (removedIssueComment) {
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: pr.number,
-                    body: 'Thanks for linking an issue! Your PR now meets our contributing guidelines. 👍'
-                  });
-                }
+                await removeComment('issue');
               }
             }
 
@@ -184,7 +168,17 @@ jobs:
               console.log(`PR #${pr.number} is non-compliant: ${issues.map(i => i.type).join(', ')}`);
             } else {
               if (hasComplianceLabel) {
+                // Was non-compliant, now fixed
                 await removeLabel('needs:compliance');
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: 'Thanks for updating your PR! It now meets our contributing guidelines. 👍'
+                });
+                console.log(`PR #${pr.number} is now compliant, label removed`);
+              } else {
+                console.log('PR meets all standards');
               }
-              console.log('PR meets all standards');
             }
